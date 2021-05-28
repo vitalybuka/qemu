@@ -2300,7 +2300,12 @@ void page_set_flags(target_ulong start, target_ulong end, int flags)
             p->flags = flags;
         } else {
             /* Using mprotect on a page does not change MAP_ANON. */
+#ifdef TARGET_AARCH64
+            /* Don't reset MTE. */
+            p->flags = (p->flags & (PAGE_ANON | PAGE_MTE)) | flags;
+#else
             p->flags = (p->flags & PAGE_ANON) | flags;
+#endif
         }
     }
 }
