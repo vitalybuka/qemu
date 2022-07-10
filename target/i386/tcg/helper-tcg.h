@@ -42,6 +42,7 @@ void x86_cpu_do_interrupt(CPUState *cpu);
 bool x86_cpu_exec_interrupt(CPUState *cpu, int int_req);
 #endif
 
+vaddr x86_cpu_clean_addr(CPUState *cpu, vaddr addr);
 void breakpoint_handler(CPUState *cs);
 
 /* n must be a constant to be efficient */

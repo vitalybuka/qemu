@@ -163,7 +163,7 @@ static bool mmu_translate(CPUX86State *env, const TranslateParams *in,
                 /*
                  * Page table level 5
                  */
-                pte_addr = ((in->cr3 & ~0xfff) +
+                pte_addr = ((in->cr3 & PG_ADDRESS_MASK) +
                             (((addr >> 48) & 0x1ff) << 3)) & a20_mask;
                 if (!ptw_translate(&pte_trans, pte_addr)) {
                     return false;
@@ -632,6 +632,32 @@ bool x86_cpu_tlb_fill(CPUState *cs, vaddr addr, int size,
         env->cr[2] = err.cr2;
     }
     raise_exception_err_ra(env, err.exception_index, err.error_code, retaddr);
+}
+
+static inline int64_t sign_extend64(uint64_t value, int index)
+{
+    int shift = 63 - index;
+    return (int64_t)(value << shift) >> shift;
+}
+
+vaddr x86_cpu_clean_addr(CPUState *cs, vaddr addr)
+{
+    CPUX86State *env = &X86_CPU(cs)->env;
+    bool la57 = env->cr[4] & CR4_LA57_MASK;
+
+    if (addr >> 63) {
+        if (env->cr[4] & CR4_LAM_SUP) {
+            return sign_extend64(addr, la57 ? 56 : 47);
+        }
+    } else {
+        if (env->cr[3] & CR3_LAM_U57) {
+            return sign_extend64(addr, 56);
+        } else if (env->cr[3] & CR3_LAM_U48) {
+            return sign_extend64(addr, 47);
+        }
+    }
+
+    return addr;
 }
 
 G_NORETURN void x86_cpu_do_unaligned_access(CPUState *cs, vaddr vaddr,
